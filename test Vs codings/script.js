@@ -65,7 +65,7 @@ function handleSignup(event) {
   if (accountType === "admin") {
     window.location.href = "admin.html";
   } else {
-    window.location.href = "index.html";
+    window.location.href = "sites.html";
   }
 }
 
@@ -104,7 +104,7 @@ function handleLogin(event) {
   if (userData.accountType === "admin") {
     window.location.href = "admin.html";
   } else {
-    window.location.href = "index.html";
+    window.location.href = "sites.html";
   }
 }
 
@@ -150,13 +150,13 @@ function checkAuth() {
   const currentPage = window.location.pathname;
 
   if (
-    currentPage.includes("index.html") ||
+    currentPage.includes("sites.html") ||
     currentPage.includes("admin.html")
   ) {
     const currentUser = localStorage.getItem("currentUser");
     if (!currentUser) {
       alert("⚠️ Please login first!");
-      window.location.href = "home.html";
+      window.location.href = "index.html";
     }
   }
 }
