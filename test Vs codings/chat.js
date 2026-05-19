@@ -180,6 +180,9 @@ function loadPrivateMessages(recipientUid) {
     const chatId = getChatId(currentUser.uid, recipientUid);
     const privateMessagesRef = rtdb.ref('messages/private-messages/' + chatId);
 
+    // Remove previous listeners
+    privateMessagesRef.off();
+    
     // Clear previous messages
     document.getElementById('privateMessagesDisplay').innerHTML = '';
 
