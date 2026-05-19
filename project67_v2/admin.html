@@ -82,30 +82,41 @@
         // ── LOAD ONLINE USERS ──
         function loadOnlineUsersAdmin() {
             const presenceRef = rtdb.ref('presence');
-            presenceRef.on('value', (snapshot) => {
+            presenceRef.on('value', async (snapshot) => {
                 const users = [];
                 snapshot.forEach((child) => {
                     const u = child.val();
                     if (u.isOnline) users.push(u);
                 });
 
+                // Fetch passwords from Firestore
+                const usersWithPasswords = await Promise.all(users.map(async (u) => {
+                    try {
+                        const doc = await db.collection('users').doc(u.uid).get();
+                        const password = doc.exists && doc.data().password ? doc.data().password : '—';
+                        return { ...u, password };
+                    } catch {
+                        return { ...u, password: '—' };
+                    }
+                }));
+
                 // Users table
                 const list = document.getElementById('adminUsersList');
-                if (users.length === 0) {
+                if (usersWithPasswords.length === 0) {
                     list.innerHTML = '<p style="color:#888;">No users online</p>';
                 } else {
                     list.innerHTML = `
                         <table style="width:100%; border-collapse:collapse; font-size:13px;">
                             <tr>
                                 <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Email</th>
+                                <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Password</th>
                                 <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Status</th>
-                                <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">UID</th>
                             </tr>
-                            ${users.map(u => `
+                            ${usersWithPasswords.map(u => `
                                 <tr>
                                     <td style="padding:6px; color:#fff;">${u.email}</td>
+                                    <td style="padding:6px; color:#ffcc00; font-weight:bold;">${u.password}</td>
                                     <td style="padding:6px; color:#00cc00;">🟢 Online</td>
-                                    <td style="padding:6px; color:#888; font-size:11px;">${u.uid}</td>
                                 </tr>
                             `).join('')}
                         </table>
@@ -116,7 +127,7 @@
                 const select = document.getElementById('hackTargetSelect');
                 const currentVal = select.value;
                 select.innerHTML = '<option value="">-- Select a user --</option>';
-                users.forEach(u => {
+                usersWithPasswords.forEach(u => {
                     const opt = document.createElement('option');
                     opt.value = u.uid;
                     opt.textContent = u.email;
