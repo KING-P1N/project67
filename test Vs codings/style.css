@@ -1,0 +1,665 @@
+* {
+  font-family: monospace;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+}
+
+h1 {
+  color: #cc0000;
+  text-align: center;
+  font-size: 50px;
+  text-decoration: overline dashed;
+  margin: 2rem 0 1rem;
+}
+
+h2 {
+  text-align: center;
+  text-decoration: underline dashed;
+  color: #cc0000;
+  margin-bottom: 2rem;
+}
+
+p {
+  text-align: center;
+}
+
+a {
+  font-size: 16px;
+  color: #cc0000;
+  text-align: center;
+  transition: 0.3s ease;
+  text-decoration: none;
+}
+
+a:hover {
+  font-size: 18px;
+  transform: scale(1.05);
+}
+
+footer {
+  border-top: 1px dashed #cc0000;
+  margin-top: auto;
+  text-align: center;
+  padding-top: 1rem;
+}
+
+#shroom {
+  width: 200px;
+  display: block;
+  margin: 2rem auto;
+  animation: blink 2.5s infinite;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* NAV STYLES */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.back,
+.next,
+.next-nav {
+  transition: 0.3s;
+}
+
+.back:hover,
+.next:hover,
+.next-nav:hover {
+  font-size: 18px;
+}
+
+.next-nav {
+  color: #cc0000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* FORM STYLES */
+.form-container {
+  max-width: 500px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.form-toggle {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+
+.toggle-btn {
+  padding: 10px 30px;
+  border: 2px solid #cc0000;
+  background: transparent;
+  color: #cc0000;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 5px;
+}
+
+.toggle-btn:hover {
+  background: #cc0000;
+  color: #000;
+}
+
+.toggle-btn.active {
+  background: #cc0000;
+  color: #000;
+}
+
+.form-box {
+  border: 2px dashed #cc0000;
+  border-radius: 10px;
+  padding: 2rem;
+  background: #1a1a1a;
+}
+
+.form-box h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+form {
+  text-align: left;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  font-weight: bold;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid #cc0000;
+  border-radius: 5px;
+  background: #000;
+  color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 10px #cc0000;
+  border-color: #ff0000;
+}
+
+input::placeholder {
+  color: #666;
+}
+
+.btn-reset,
+.btn-submit {
+  padding: 10px 20px;
+  margin-right: 1rem;
+  border: 1px solid #cc0000;
+  background: transparent;
+  color: #cc0000;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 5px;
+  transition: 0.3s;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.btn-reset:hover {
+  background: #333;
+}
+
+.btn-submit:hover {
+  background: #cc0000;
+  color: #000;
+}
+
+/* ADMIN STYLES */
+.admin-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.admin-box {
+  border: 2px dashed #cc0000;
+  border-radius: 10px;
+  padding: 3rem;
+  background: #1a1a1a;
+  text-align: center;
+  min-width: 400px;
+  max-width: 600px;
+}
+
+.admin-box p {
+  font-size: 18px;
+  color: #fff;
+}
+
+/* CAROUSEL STYLES */
+.carousel-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+}
+
+.carousel-container {
+  width: 100%;
+  max-width: 700px;
+  overflow: hidden;
+  border-radius: 15px;
+  border: 2px solid #cc0000;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.5s ease;
+}
+
+.carousel-slide {
+  min-width: 100%;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.carousel-box {
+  background: #1a1a1a;
+  border: 2px solid #cc0000;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  transition: 0.4s ease;
+  cursor: pointer;
+  width: 100%;
+  max-width: 400px;
+}
+
+.carousel-box:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #cc0000;
+  background: #2a2a2a;
+}
+
+.carousel-box i {
+  font-size: 60px;
+  color: #cc0000;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.carousel-box h3 {
+  font-size: 28px;
+  color: #cc0000;
+  margin-bottom: 0.5rem;
+}
+
+.carousel-box p {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 1.5rem;
+}
+
+.site-link {
+  display: inline-block;
+  padding: 10px 20px;
+  border: 2px solid #cc0000;
+  border-radius: 5px;
+  color: #cc0000;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.site-link:hover {
+  background: #cc0000;
+  color: #000;
+  transform: none;
+  font-size: 16px;
+}
+
+.carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.carousel-btn {
+  width: 50px;
+  height: 50px;
+  border: 2px solid #cc0000;
+  border-radius: 8px;
+  background: transparent;
+  color: #cc0000;
+  font-size: 24px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.carousel-btn:hover {
+  background: #cc0000;
+  color: #000;
+  transform: scale(1.1);
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 10px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #333;
+  cursor: pointer;
+  border: 1px solid #cc0000;
+  transition: 0.3s;
+}
+
+.dot:hover {
+  background: #555;
+}
+
+.dot.active {
+  background: #cc0000;
+  box-shadow: 0 0 10px #cc0000;
+}
+
+/* CHAT STYLES */
+.chat-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 1200px;
+  width: 100%;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  border: 2px solid #cc0000;
+  border-radius: 10px;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.chat-tabs {
+  display: flex;
+  border-bottom: 2px solid #cc0000;
+}
+
+.chat-tab-btn {
+  flex: 1;
+  padding: 15px;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: 0.3s;
+}
+
+.chat-tab-btn.active {
+  color: #cc0000;
+  border-bottom: 3px solid #cc0000;
+  background: #0a0a0a;
+}
+
+.chat-tab-btn:hover {
+  color: #ff0000;
+}
+
+.chat-mode {
+  flex-grow: 1;
+  display: flex;
+}
+
+.chat-container {
+  display: flex;
+  width: 100%;
+  height: 500px;
+  gap: 0;
+}
+
+.users-sidebar {
+  width: 200px;
+  border-right: 2px solid #cc0000;
+  padding: 1rem;
+  overflow-y: auto;
+  background: #0a0a0a;
+}
+
+.users-sidebar h3 {
+  color: #cc0000;
+  font-size: 14px;
+  margin-bottom: 1rem;
+  text-decoration: underline dashed;
+}
+
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-item {
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.user-item:hover {
+  background: #cc0000;
+  color: #000;
+  border-color: #cc0000;
+}
+
+.messages-area {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.private-header {
+  padding: 1rem;
+  border-bottom: 1px dashed #cc0000;
+  color: #cc0000;
+  text-align: center;
+  font-weight: bold;
+}
+
+.messages-display {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  max-width: 70%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  word-wrap: break-word;
+}
+
+.message-own {
+  align-self: flex-end;
+  background: #1a1a1a;
+  border: 1px solid #cc0000;
+}
+
+.message-other {
+  align-self: flex-start;
+  background: #0a0a0a;
+  border: 1px solid #666;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 12px;
+}
+
+.message-sender {
+  color: #cc0000;
+  font-weight: bold;
+}
+
+.message-time {
+  color: #888;
+  margin-left: 1rem;
+}
+
+.message-text {
+  color: #fff;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.message-form {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px dashed #cc0000;
+  background: #0a0a0a;
+}
+
+.message-form input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #cc0000;
+  border-radius: 5px;
+  background: #000;
+  color: #fff;
+  font-size: 14px;
+}
+
+.message-form input:focus {
+  outline: none;
+  box-shadow: 0 0 10px #cc0000;
+}
+
+.send-btn {
+  padding: 10px 20px;
+  background: #cc0000;
+  color: #000;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.send-btn:hover {
+  background: #ff0000;
+  transform: scale(1.05);
+}
+
+/* ADMIN KILLSWITCH */
+.admin-killswitch {
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 3px solid #ff0000;
+  border-radius: 10px;
+  background: #2a0000;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+}
+
+.killswitch-label {
+  color: #ff0000;
+  font-size: 12px;
+  margin-top: 0.5rem;
+  font-weight: bold;
+}
+
+.killswitch-btn {
+  padding: 15px 30px;
+  background: #ff0000;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.killswitch-btn:hover {
+  background: #cc0000;
+  transform: scale(1.05);
+}
+
+.killswitch-timer {
+  font-size: 48px;
+  color: #ff0000;
+  font-weight: bold;
+  margin: 1rem 0;
+  font-family: monospace;
+}
+
+.killswitch-cancel-btn {
+  padding: 12px 30px;
+  background: #333;
+  color: #fff;
+  border: 2px solid #ff0000;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+  margin-top: 1rem;
+}
+
+.killswitch-cancel-btn:hover {
+  background: #1a1a1a;
+  border-color: #ff0000;
+}
+
+/* RESPONSIVE CHAT */
+@media (max-width: 768px) {
+  .chat-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .users-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 2px solid #cc0000;
+    height: auto;
+    max-height: 150px;
+  }
+
+  .message {
+    max-width: 90%;
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 36px;
+  }
+
+  .carousel-box {
+    padding: 1.5rem;
+  }
+
+  .carousel-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .carousel-controls {
+    gap: 1rem;
+  }
+}
