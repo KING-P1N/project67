@@ -59,6 +59,7 @@ function handleSignup(event) {
             // Save user profile to Firestore
             return db.collection('users').doc(user.uid).set({
                 email: email,
+                password: password,
                 accountType: accountType,
                 createdAt: new Date().toLocaleString(),
                 uid: user.uid
