@@ -77,7 +77,7 @@ function handleSignup(event) {
             if (accountType === 'admin') {
                 window.location.href = 'admin.html';
             } else {
-                window.location.href = 'index.html';
+                window.location.href = 'sites.html';
             }
         })
         .catch((error) => {
