@@ -1,6 +1,5 @@
 // ======================= FIREBASE REALTIME DB SETUP =======================
 
-let rtdb = firebase.database();
 let currentUser = null;
 let selectedPrivateUser = null;
 let killswitchCountdownInterval = null;
