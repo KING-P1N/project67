@@ -133,7 +133,7 @@ function handleLogin(event) {
                         if (userData.accountType === 'admin') {
                             window.location.href = 'admin.html';
                         } else {
-                            window.location.href = 'index.html';
+                            window.location.href = 'sites.html';
                         }
                     }
                 });
@@ -193,7 +193,7 @@ function logout() {
             localStorage.removeItem('userAccountType');
             localStorage.removeItem('userEmail');
             console.log('✓ User logged out');
-            window.location.href = 'home.html';
+            window.location.href = 'index.html';
         })
         .catch((error) => {
             console.error('❌ Logout error:', error);
