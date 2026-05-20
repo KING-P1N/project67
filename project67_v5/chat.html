@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT 67 - Chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav">
+        <a class="back" href="hub.html">&#8592; BACK</a>
+        <a class="next" onclick="logout()">LOGOUT &#8594;</a>
+    </div>
+
+    <h1>PROJECT 67</h1>
+    <h2>LIVE CHAT</h2>
+
+    <div class="chat-wrapper">
+        <!-- Chat Mode Tabs -->
+        <div class="chat-tabs">
+            <button class="chat-tab-btn active" id="groupTabBtn" onclick="switchChatMode('group')">GROUP CHAT</button>
+            <button class="chat-tab-btn" id="privateTabBtn" onclick="switchChatMode('private')">PRIVATE MESSAGES</button>
+        </div>
+
+        <!-- GROUP CHAT MODE -->
+        <div class="chat-mode" id="groupChatMode" style="display: block;">
+            <div class="chat-container">
+                <!-- Online Users List -->
+                <div class="users-sidebar">
+                    <h3>ONLINE USERS</h3>
+                    <div class="users-list" id="onlineUsersList">
+                        <p style="color: #888; font-size: 12px;">Loading...</p>
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div class="messages-area">
+                    <div class="messages-display" id="groupMessagesDisplay">
+                        <p style="color: #888; text-align: center; margin-top: 2rem;">No messages yet. Be the first to say hello!</p>
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="emoji-picker" id="groupEmojiPicker" style="display:none;"></div>
+                    <form class="message-form" onsubmit="sendGroupMessage(event)">
+                        <button type="button" class="emoji-btn" onclick="toggleEmoji('groupEmojiPicker', 'groupMessageInput')">😊</button>
+                        <input 
+                            type="text" 
+                            id="groupMessageInput" 
+                            placeholder="Type a message..." 
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="submit" class="send-btn">SEND</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRIVATE MESSAGES MODE -->
+        <div class="chat-mode" id="privateChatMode" style="display: none;">
+            <div class="chat-container">
+                <!-- Users to Chat With -->
+                <div class="users-sidebar">
+                    <h3>USERS</h3>
+                    <div class="users-list" id="usersListPrivate">
+                        <p style="color: #888; font-size: 12px;">Loading...</p>
+                    </div>
+                </div>
+
+                <!-- Private Messages Area -->
+                <div class="messages-area">
+                    <div class="private-header" id="privateHeader">
+                        <p>Select a user to start chatting</p>
+                    </div>
+
+                    <div class="messages-display" id="privateMessagesDisplay" style="display: none;">
+                        <!-- Messages load here -->
+                    </div>
+
+                    <!-- Message Input -->
+                    <div class="emoji-picker" id="privateEmojiPicker" style="display:none;"></div>
+                    <form class="message-form" id="privateMessageForm" style="display: none;" onsubmit="sendPrivateMessage(event)">
+                        <button type="button" class="emoji-btn" onclick="toggleEmoji('privateEmojiPicker', 'privateMessageInput')">😊</button>
+                        <input 
+                            type="text" 
+                            id="privateMessageInput" 
+                            placeholder="Type a message..." 
+                            autocomplete="off"
+                            required
+                        >
+                        <button type="submit" class="send-btn">SEND</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN KILLSWITCH (HIDDEN) -->
+    <div class="admin-killswitch" id="adminKillswitch" style="display: none;">
+        <div id="killswitchNormal">
+            <button class="killswitch-btn" onclick="startKillswitch()">🔴 NUCLEAR OPTION</button>
+            <p class="killswitch-label">Delete all messages</p>
+        </div>
+        <div id="killswitchCountdown" style="display: none;">
+            <div class="killswitch-timer" id="killswitchTimer">5</div>
+            <button class="killswitch-cancel-btn" onclick="cancelKillswitch()">CANCEL</button>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 PROJECT 67. All rights reserved.</p>
+        <p style="color:#444; font-size:11px; margin-top:4px;">VER.67.1</p>
+        
+    </footer>
+
+    <!-- Firebase SDK (Compat version for browser globals) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="script_new.js"></script>
+    <script src="chat.js"></script>
+
+    <script>
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                rtdb.ref("hacks/" + user.uid).on("value", (snap) => {
+                    if (snap.val() && snap.val().hacked === true) {
+                        rtdb.ref("hacks/" + user.uid).remove();
+                        window.location.href = "hacked.html";
+                    }
+                });
+            }
+        });
+    </script>
+
+    <script>
+        const EMOJIS = ['😀','😂','😍','😭','😊','😎','🥳','😅','🤔','😴','😡','🥺','👍','👎','❤️','🔥','💀','🤣','😤','🙏','💯','✅','🎉','👀','💬','🚀','⚡','🎮','💀','👾','🍄'];
+        
+        function buildEmojiPicker(pickerId, inputId) {
+            const picker = document.getElementById(pickerId);
+            if (picker.innerHTML) return; // already built
+            picker.innerHTML = EMOJIS.map(e => 
+                `<span class="emoji-item" onclick="insertEmoji('${inputId}','${e}')">${e}</span>`
+            ).join('');
+        }
+
+        function toggleEmoji(pickerId, inputId) {
+            buildEmojiPicker(pickerId, inputId);
+            const picker = document.getElementById(pickerId);
+            picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        function insertEmoji(inputId, emoji) {
+            const input = document.getElementById(inputId);
+            input.value += emoji;
+            input.focus();
+        }
+
+        // Close emoji picker when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('emoji-btn') && !e.target.classList.contains('emoji-item')) {
+                document.querySelectorAll('.emoji-picker').forEach(p => p.style.display = 'none');
+            }
+        });
+    </script>
+
+</body>
+</html>
