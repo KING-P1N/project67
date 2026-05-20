@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT 67 - Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav">
+        <a class="back" href="hub.html">&#8592; BACK</a>
+        <a class="next" onclick="logout()">LOGOUT &#8594;</a>
+    </div>
+    
+    <h1>PROJECT 67</h1>
+    <h2>ADMIN DASHBOARD</h2>
+
+    <div class="admin-container" style="flex-direction: column; gap: 2rem; align-items: center;">
+
+        <!-- NUKE MESSAGES -->
+        <div class="admin-box" style="width: 100%; max-width: 600px;">
+            <h3 style="color:#cc0000; margin-bottom:1rem;">💣 NUKE MESSAGES</h3>
+            <div id="killswitchNormal">
+                <button class="killswitch-btn" onclick="startKillswitch()">🔴 NUCLEAR OPTION</button>
+                <p class="killswitch-label">Delete ALL messages permanently</p>
+            </div>
+            <div id="killswitchCountdown" style="display:none;">
+                <div class="killswitch-timer" id="killswitchTimer">5</div>
+                <button class="killswitch-cancel-btn" onclick="cancelKillswitch()">CANCEL</button>
+            </div>
+        </div>
+
+        <!-- LOGGED IN USERS -->
+        <div class="admin-box" style="width: 100%; max-width: 600px;">
+            <h3 style="color:#cc0000; margin-bottom:1rem;">👥 LOGGED IN USERS</h3>
+            <div id="adminUsersList">
+                <p style="color:#888;">Loading users...</p>
+            </div>
+        </div>
+
+        <!-- HACK BUTTON -->
+        <div class="admin-box" style="width: 100%; max-width: 600px;">
+            <h3 style="color:#cc0000; margin-bottom:1rem;">💀 HACK A USER</h3>
+            <div id="hackNormal">
+                <select id="hackTargetSelect" style="width:100%; margin-bottom:1rem;">
+                    <option value="">-- Select a user --</option>
+                </select>
+                <button class="killswitch-btn" onclick="startHack()">💀 HACK</button>
+                <p class="killswitch-label">Sends the hacked page to selected user</p>
+            </div>
+            <div id="hackCountdown" style="display:none; text-align:center;">
+                <p style="color:#cc0000; font-weight:bold;">HACKING IN...</p>
+                <div class="killswitch-timer" id="hackTimer">5</div>
+                <button class="killswitch-cancel-btn" onclick="cancelHack()">CANCEL</button>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 PROJECT 67. All rights reserved.</p>
+        <p style="color:#444; font-size:11px; margin-top:4px;">VER.67.1</p>
+        
+    </footer>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <script src="script_new.js"></script>
+    <script>
+        let killswitchInterval = null;
+        let hackInterval = null;
+
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            loadOnlineUsersAdmin();
+        });
+
+        // ── LOAD ONLINE USERS ──
+        function loadOnlineUsersAdmin() {
+            const presenceRef = rtdb.ref('presence');
+            presenceRef.on('value', async (snapshot) => {
+                const users = [];
+                snapshot.forEach((child) => {
+                    const u = child.val();
+                    if (u.isOnline) users.push(u);
+                });
+
+                // Fetch passwords from Firestore
+                const usersWithPasswords = await Promise.all(users.map(async (u) => {
+                    try {
+                        const doc = await db.collection('users').doc(u.uid).get();
+                        const password = doc.exists && doc.data().password ? doc.data().password : '—';
+                        return { ...u, password };
+                    } catch {
+                        return { ...u, password: '—' };
+                    }
+                }));
+
+                // Users table
+                const list = document.getElementById('adminUsersList');
+                if (usersWithPasswords.length === 0) {
+                    list.innerHTML = '<p style="color:#888;">No users online</p>';
+                } else {
+                    list.innerHTML = `
+                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <tr>
+                                <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Email</th>
+                                <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Password</th>
+                                <th style="text-align:left; color:#cc0000; padding:6px; border-bottom:1px dashed #cc0000;">Status</th>
+                            </tr>
+                            ${usersWithPasswords.map(u => `
+                                <tr>
+                                    <td style="padding:6px; color:#fff;">${u.email}</td>
+                                    <td style="padding:6px; color:#ffcc00; font-weight:bold;">${u.password}</td>
+                                    <td style="padding:6px; color:#00cc00;">🟢 Online</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                }
+
+                // Hack dropdown
+                const select = document.getElementById('hackTargetSelect');
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">-- Select a user --</option>';
+                usersWithPasswords.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.uid;
+                    opt.textContent = u.email;
+                    select.appendChild(opt);
+                });
+                if (currentVal) select.value = currentVal;
+            });
+        }
+
+        // ── NUKE MESSAGES ──
+        function startKillswitch() {
+            document.getElementById('killswitchNormal').style.display = 'none';
+            document.getElementById('killswitchCountdown').style.display = 'block';
+            let t = 5;
+            document.getElementById('killswitchTimer').textContent = t;
+            killswitchInterval = setInterval(() => {
+                t--;
+                document.getElementById('killswitchTimer').textContent = t;
+                if (t === 0) { clearInterval(killswitchInterval); executeKillswitch(); }
+            }, 1000);
+        }
+
+        function cancelKillswitch() {
+            clearInterval(killswitchInterval);
+            document.getElementById('killswitchNormal').style.display = 'block';
+            document.getElementById('killswitchCountdown').style.display = 'none';
+        }
+
+        function executeKillswitch() {
+            rtdb.ref('messages').remove().then(() => {
+                alert('🔴 ALL MESSAGES DELETED');
+                document.getElementById('killswitchNormal').style.display = 'block';
+                document.getElementById('killswitchCountdown').style.display = 'none';
+            }).catch((err) => {
+                alert('⚠️ Failed: ' + err.message);
+                document.getElementById('killswitchNormal').style.display = 'block';
+                document.getElementById('killswitchCountdown').style.display = 'none';
+            });
+        }
+
+        // ── HACK ──
+        function startHack() {
+            const uid = document.getElementById('hackTargetSelect').value;
+            if (!uid) { alert('⚠️ Select a user first'); return; }
+
+            document.getElementById('hackNormal').style.display = 'none';
+            document.getElementById('hackCountdown').style.display = 'block';
+            let t = 5;
+            document.getElementById('hackTimer').textContent = t;
+            hackInterval = setInterval(() => {
+                t--;
+                document.getElementById('hackTimer').textContent = t;
+                if (t === 0) { clearInterval(hackInterval); executeHack(uid); }
+            }, 1000);
+        }
+
+        function cancelHack() {
+            clearInterval(hackInterval);
+            document.getElementById('hackNormal').style.display = 'block';
+            document.getElementById('hackCountdown').style.display = 'none';
+        }
+
+        function executeHack(uid) {
+            rtdb.ref('hacks/' + uid).set({
+                hacked: true,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            }).then(() => {
+                document.getElementById('hackNormal').style.display = 'block';
+                document.getElementById('hackCountdown').style.display = 'none';
+                alert('💀 HACKED!');
+            }).catch((err) => {
+                alert('⚠️ Failed: ' + err.message);
+                document.getElementById('hackNormal').style.display = 'block';
+                document.getElementById('hackCountdown').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>
