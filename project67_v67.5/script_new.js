@@ -217,7 +217,7 @@ function loadProfileWidget() {
         if (!user) return;
         db.collection('users').doc(user.uid).get().then((doc) => {
             const data = doc.exists ? doc.data() : {};
-            const username = (data.username && data.username.trim() !== '') ? data.username : user.email;
+            const username = (data.username && data.username.trim() !== '') ? data.username : user.email.split('@')[0];
             localStorage.setItem('userUsername', username);
             localStorage.setItem('userEmail', user.email);
             if (widget) {
