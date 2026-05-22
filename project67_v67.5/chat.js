@@ -31,17 +31,20 @@ function markUserOnline(uid, email) {
     const userPresenceRef = rtdb.ref('presence/' + uid);
     db.collection('users').doc(uid).get().then((doc) => {
         const username = doc.exists ? (doc.data().username || email) : email;
-        userPresenceRef.set({
+        return userPresenceRef.set({
             uid: uid,
             email: email,
             username: username,
             isOnline: true,
             lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
+    }).then(() => {
         userPresenceRef.onDisconnect().update({
             isOnline: false,
             lastSeen: firebase.database.ServerValue.TIMESTAMP
         });
+    }).catch((error) => {
+        console.error('Presence write failed:', error.message);
     });
 }
 
