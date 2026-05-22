@@ -235,9 +235,29 @@ function startClock() {
         const el = document.getElementById('footerClock');
         if (!el) return;
         const now = new Date();
-        const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-                       hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' };
-        el.textContent = now.toLocaleString('en-US', opts);
+        const h = now.getHours().toString().padStart(2,'0');
+        const m = now.getMinutes().toString().padStart(2,'0');
+        const s = now.getSeconds().toString().padStart(2,'0');
+        const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+        const h12 = now.getHours() % 12 || 12;
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const dateStr = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+        const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const tzOffset = -now.getTimezoneOffset();
+        const tzSign = tzOffset >= 0 ? '+' : '-';
+        const tzHours = String(Math.floor(Math.abs(tzOffset)/60)).padStart(2,'0');
+        const tzMins = String(Math.abs(tzOffset)%60).padStart(2,'0');
+        const tzStr = `GMT${tzSign}${tzHours}:${tzMins}`;
+
+        el.innerHTML = `
+            <div class="clock-label">Current Time</div>
+            <div class="clock-time">
+                <span class="clock-hm">${h12}<span class="clock-dot">:</span>${m.toString().padStart(2,'0')}</span>
+                <span class="clock-secs">${s} ${ampm}</span>
+                <span class="clock-date">${dateStr}<br><span style="color:#888;">${tzStr}</span></span>
+            </div>
+        `;
     }
     updateClock();
     setInterval(updateClock, 1000);
