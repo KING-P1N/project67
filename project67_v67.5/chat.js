@@ -52,12 +52,10 @@ function loadOnlineUsers() {
     const presenceRef = rtdb.ref('presence');
 
     presenceRef.on('value', async (snapshot) => {
-        const rawUsers = [];
-        snapshot.forEach((child) => {
-            const userData = child.val();
-            if (userData.uid && userData.uid !== currentUser.uid) {
-                rawUsers.push(userData);
-            }
+    // ... your existing code ...
+}, (error) => {
+    console.error('RTDB read blocked:', error.message);
+});
         });
 
         // Cross-check against Firestore to remove stale deleted users
