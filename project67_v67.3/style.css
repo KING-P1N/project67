@@ -930,7 +930,7 @@ footer {
 
 .footer-clock {
     background: #0a0a0a;
-    border: 1px solid #333;
+    border: 1px solid #cc0000;
     border-radius: 12px;
     padding: 14px 20px;
     font-family: monospace;
@@ -938,7 +938,7 @@ footer {
 }
 
 .clock-label {
-    color: #666;
+    color: #cc0000;
     font-size: 11px;
     margin-bottom: 6px;
     letter-spacing: 1px;
@@ -964,15 +964,15 @@ footer {
 
 .clock-secs {
     font-size: 13px;
-    color: #888;
+    color: #cc0000;
     line-height: 1.4;
 }
 
 .clock-date {
     font-size: 12px;
-    color: #aaa;
+    color: #fff;
     line-height: 1.5;
-    border-left: 1px solid #333;
+    border-left: 1px solid #cc0000;
     padding-left: 12px;
 }
 
