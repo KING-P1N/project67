@@ -56,7 +56,7 @@ function loadOnlineUsers() {
 }, (error) => {
     console.error('RTDB read blocked:', error.message);
 });
-        });
+       
 
         // Cross-check against Firestore to remove stale deleted users
         const validUsers = [];
