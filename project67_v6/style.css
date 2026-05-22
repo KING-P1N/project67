@@ -475,6 +475,7 @@ input::placeholder {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-items: stretch;
 }
 
 .message {
@@ -928,13 +929,50 @@ footer {
 
 .footer-clock {
     background: #0a0a0a;
-    border: 1px solid #cc0000;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
-    color: #cc0000;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px 20px;
     font-family: monospace;
-    white-space: nowrap;
+    min-width: 220px;
+}
+
+.clock-label {
+    color: #666;
+    font-size: 11px;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.clock-time {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.clock-hm {
+    font-size: 36px;
+    color: #fff;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.clock-dot {
+    color: #cc0000;
+    animation: blink 1s infinite;
+}
+
+.clock-secs {
+    font-size: 13px;
+    color: #888;
+    line-height: 1.4;
+}
+
+.clock-date {
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+    border-left: 1px solid #333;
+    padding-left: 12px;
 }
 
 /* NAV flex fix for profile widget */
