@@ -29,17 +29,10 @@ auth.onAuthStateChanged((user) => {
 
 function markUserOnline(uid, email) {
     const userPresenceRef = rtdb.ref('presence/' + uid);
-    
-    // Set presence instantly using cached username or Firebase Auth displayName
     const cachedUsername = localStorage.getItem('userUsername') || (currentUser ? currentUser.displayName : null) || email.split('@')[0];
-    
-    // Ensure user is in the registered users list in RTDB
-    rtdb.ref('users/' + uid).update({
-        uid: uid,
-        email: email,
-        username: cachedUsername
-    });
 
+    // FIX: Do NOT update users/ here — login already wrote it with the password.
+    // Only update presence so we don't strip the password field.
     userPresenceRef.set({
         uid: uid,
         email: email,
@@ -47,18 +40,19 @@ function markUserOnline(uid, email) {
         isOnline: true,
         lastSeen: firebase.database.ServerValue.TIMESTAMP
     });
-    
+
     userPresenceRef.onDisconnect().update({
         isOnline: false,
         lastSeen: firebase.database.ServerValue.TIMESTAMP
     });
 
-    // Quietly update from Firestore in the background if possible
+    // Quietly sync username from Firestore — only update username, never touch password
     db.collection('users').doc(uid).get().then((doc) => {
         if (doc.exists && doc.data().username) {
             const finalUsername = doc.data().username;
             userPresenceRef.update({ username: finalUsername });
-            rtdb.ref('users/' + uid).update({ username: finalUsername });
+            // Only update username field, not the whole node (preserves password)
+            rtdb.ref('users/' + uid + '/username').set(finalUsername);
         }
     }).catch((err) => {
         console.warn("Firestore username fetch failed: ", err);
@@ -100,7 +94,7 @@ function loadOnlineUsers() {
             privateUsersList.innerHTML = validUsers.length === 0
                 ? '<p style="color:#888; font-size:12px;">No users yet</p>'
                 : validUsers.map(u => {
-                    const safeUsername = (u.username || u.email).replace(/'/g, "\'");
+                    const safeUsername = (u.username || u.email).replace(/'/g, "\\'");
                     return `<div class="user-item" onclick="selectPrivateUser('${u.uid}', '${safeUsername}')">
                         ${u.isOnline ? '🟢' : '⚫'} ${u.username || u.email}
                         <span style="display:block; font-size:10px; color:#666;">${u.isOnline ? 'Online' : 'Offline'}</span>
