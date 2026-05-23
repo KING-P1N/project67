@@ -28,7 +28,7 @@ function handleSignup(event) {
     const confirm = document.getElementById('signup-confirm').value.trim();
     const accountType = 'user';
 
-    console.log('📝 Signup started:', {username, email, password});
+    console.log('📝 Signup started:', { username, email });
 
     if (!username || !email || !password || !confirm) {
         alert('⚠️ All fields are required!');
@@ -48,54 +48,53 @@ function handleSignup(event) {
     submitBtn.innerText = 'SIGNING UP...';
     submitBtn.disabled = true;
 
+    let createdUser = null;
+
     auth.createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
-            const user = userCredential.user;
-            return user.updateProfile({
-                displayName: username
-            }).then(() => {
-                console.log('✓ User profile updated');
-                return db.collection('users').doc(user.uid).set({
-                    email: email,
-                    username: username,
-                    password: password,
-                    accountType: accountType,
-                    createdAt: new Date().toLocaleString(),
-                    uid: user.uid
-                });
+            createdUser = userCredential.user;
+            return createdUser.updateProfile({ displayName: username });
+        })
+        .then(() => {
+            // Save to Firestore
+            return db.collection('users').doc(createdUser.uid).set({
+                email: email,
+                username: username,
+                password: password,
+                accountType: accountType,
+                createdAt: new Date().toLocaleString(),
+                uid: createdUser.uid
             });
         })
         .then(() => {
-            const user = auth.currentUser;
             localStorage.setItem('userAccountType', accountType);
             localStorage.setItem('userUsername', username);
-            
-            if (user) {
-                console.log('💾 Saving to RTDB - username:', username, 'password:', password);
-                
-                // FIX: Return the Promise.all directly so the chain waits for completion
-                return Promise.all([
-                    rtdb.ref('users/' + user.uid).set({
-                        uid: user.uid,
-                        email: email,
-                        username: username,
-                        password: password
-                    }),
-                    rtdb.ref('presence/' + user.uid).set({
-                        uid: user.uid,
-                        email: email,
-                        username: username,
-                        isOnline: true,
-                        lastSeen: firebase.database.ServerValue.TIMESTAMP
-                    }),
-                    rtdb.ref('presence/' + user.uid).onDisconnect().update({
-                        isOnline: false,
-                        lastSeen: firebase.database.ServerValue.TIMESTAMP
-                    })
-                ]);
-            }
+            localStorage.setItem('userEmail', email);
+
+            // Save to RTDB — must await both before redirect
+            return rtdb.ref('users/' + createdUser.uid).set({
+                uid: createdUser.uid,
+                email: email,
+                username: username,
+                password: password
+            });
         })
         .then(() => {
+            // Set presence AFTER users node is confirmed written
+            return rtdb.ref('presence/' + createdUser.uid).set({
+                uid: createdUser.uid,
+                email: email,
+                username: username,
+                isOnline: true,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        })
+        .then(() => {
+            // Register onDisconnect (fire-and-forget is fine here)
+            rtdb.ref('presence/' + createdUser.uid).onDisconnect().update({
+                isOnline: false,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
             console.log('✓ Signup complete, redirecting to hub');
             window.location.href = 'hub.html';
         })
@@ -119,7 +118,7 @@ function handleLogin(event) {
     event.preventDefault();
 
     const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim(); // <-- We capture this here
+    const password = document.getElementById('login-password').value.trim();
 
     if (!email || !password) {
         alert('⚠️ Please enter email and password!');
@@ -131,51 +130,63 @@ function handleLogin(event) {
     submitBtn.innerText = 'LOGGING IN...';
     submitBtn.disabled = true;
 
+    let loggedInUser = null;
+    let userData = null;
+
     auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
-            const user = userCredential.user;
-            return db.collection('users').doc(user.uid).get()
-                .then((docSnapshot) => {
-                    if (docSnapshot.exists) {
-                        const userData = docSnapshot.data();
-                        localStorage.setItem('userAccountType', userData.accountType);
-                        localStorage.setItem('userEmail', userData.email);
-                        localStorage.setItem('userUsername', userData.username || userData.email);
+            loggedInUser = userCredential.user;
+            return db.collection('users').doc(loggedInUser.uid).get();
+        })
+        .then((docSnapshot) => {
+            if (!docSnapshot.exists) {
+                throw new Error('User profile not found in database.');
+            }
 
-                        // FIX: Use the 'password' variable directly from the login form input
-                        rtdb.ref('users/' + user.uid).set({
-                            uid: user.uid,
-                            email: userData.email,
-                            username: userData.username || userData.email,
-                            password: password // <-- Changed from userData.password || '—'
-                        });
+            userData = docSnapshot.data();
+            localStorage.setItem('userAccountType', userData.accountType);
+            localStorage.setItem('userEmail', userData.email);
+            localStorage.setItem('userUsername', userData.username || userData.email);
 
-                        // Mark online with onDisconnect
-                        rtdb.ref('presence/' + user.uid).set({
-                            uid: user.uid,
-                            email: userData.email,
-                            username: userData.username || userData.email,
-                            isOnline: true,
-                            lastSeen: firebase.database.ServerValue.TIMESTAMP
-                        });
-                        rtdb.ref('presence/' + user.uid).onDisconnect().update({
-                            isOnline: false,
-                            lastSeen: firebase.database.ServerValue.TIMESTAMP
-                        });
-
-                        window.location.href = 'hub.html';
-                    }
-                });
+            // FIX: Await the RTDB write — password from the login form input (most up-to-date)
+            return rtdb.ref('users/' + loggedInUser.uid).set({
+                uid: loggedInUser.uid,
+                email: userData.email,
+                username: userData.username || userData.email,
+                password: password
+            });
+        })
+        .then(() => {
+            // Set presence AFTER users node is confirmed written
+            return rtdb.ref('presence/' + loggedInUser.uid).set({
+                uid: loggedInUser.uid,
+                email: userData.email,
+                username: userData.username || userData.email,
+                isOnline: true,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        })
+        .then(() => {
+            // Register onDisconnect (fire-and-forget is fine here)
+            rtdb.ref('presence/' + loggedInUser.uid).onDisconnect().update({
+                isOnline: false,
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+            console.log('✓ Login complete, redirecting to hub');
+            window.location.href = 'hub.html';
         })
         .catch((error) => {
             submitBtn.innerText = originalText;
             submitBtn.disabled = false;
+            console.error('❌ Login error:', error);
             if (error.code === 'auth/user-not-found') {
                 alert('⚠️ No account found with this email!');
             } else if (error.code === 'auth/wrong-password') {
                 alert('⚠️ Incorrect password!');
             } else if (error.code === 'auth/invalid-email') {
                 alert('⚠️ Invalid email address!');
+            } else if (error.code === 'auth/invalid-credential') {
+                alert('⚠️ Incorrect email or password!');
             } else {
                 alert('⚠️ Login failed: ' + error.message);
             }
@@ -211,14 +222,24 @@ function goToSlide(slideIndex) {
 function logout() {
     const user = auth.currentUser;
     if (user) {
-        rtdb.ref('presence/' + user.uid).update({ isOnline: false });
+        // Mark offline before signing out
+        rtdb.ref('presence/' + user.uid).update({
+            isOnline: false,
+            lastSeen: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            return auth.signOut();
+        }).then(() => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }).catch((error) => {
+            alert('⚠️ Error logging out: ' + error.message);
+        });
+    } else {
+        auth.signOut().then(() => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        });
     }
-    auth.signOut().then(() => {
-        localStorage.clear();
-        window.location.href = 'index.html';
-    }).catch((error) => {
-        alert('⚠️ Error logging out: ' + error.message);
-    });
 }
 
 // ======================= PROFILE WIDGET =======================
@@ -251,16 +272,15 @@ function loadProfileWidget() {
     // Then confirm/update from Firebase Auth/Firestore
     auth.onAuthStateChanged((user) => {
         if (!user) return;
-        
+
         let uname = user.displayName;
         const uemail = user.email;
-        
+
         if (uname && uname.trim() !== '') {
             localStorage.setItem('userUsername', uname);
             localStorage.setItem('userEmail', uemail);
             render(uname, uemail);
         } else {
-            // Fallback to Firestore
             db.collection('users').doc(user.uid).get().then((doc) => {
                 if (doc.exists && doc.data().username) {
                     uname = doc.data().username;
@@ -271,7 +291,6 @@ function loadProfileWidget() {
                 localStorage.setItem('userEmail', uemail);
                 render(uname, uemail);
             }).catch(() => {
-                // Fallback to email prefix
                 uname = uemail.split('@')[0];
                 localStorage.setItem('userUsername', uname);
                 localStorage.setItem('userEmail', uemail);
@@ -287,7 +306,7 @@ function toggleProfileMenu() {
 }
 
 // Close profile menu when clicking outside
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     const widget = document.getElementById('profileWidget');
     if (widget && !widget.contains(e.target)) {
         const menu = document.getElementById('profileMenu');
@@ -304,12 +323,12 @@ function startClock() {
         const now = new Date();
 
         const rawHours = now.getHours();
-        const ampm  = rawHours >= 12 ? 'PM' : 'AM';
+        const ampm = rawHours >= 12 ? 'PM' : 'AM';
         const hours = (rawHours % 12 || 12).toString().padStart(2, '0');
-        const mins  = now.getMinutes().toString().padStart(2, '0');
-        const secs  = now.getSeconds().toString().padStart(2, '0');
-        const tz    = now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
-        const date  = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const mins = now.getMinutes().toString().padStart(2, '0');
+        const secs = now.getSeconds().toString().padStart(2, '0');
+        const tz = now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+        const date = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
         el.innerHTML = `
             <div class="clock-label">LOCAL TIME</div>
@@ -349,7 +368,7 @@ function checkAuth() {
 
 // ======================= INIT =======================
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     checkAuth();
     loadProfileWidget();
     startClock();
