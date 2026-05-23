@@ -28,8 +28,6 @@ function handleSignup(event) {
     const confirm = document.getElementById('signup-confirm').value.trim();
     const accountType = 'user';
 
-    console.log('📝 Signup started:', { username, email });
-
     if (!username || !email || !password || !confirm) {
         alert('⚠️ All fields are required!');
         return;
@@ -56,31 +54,21 @@ function handleSignup(event) {
             return createdUser.updateProfile({ displayName: username });
         })
         .then(() => {
-            // Save to Firestore
-            return db.collection('users').doc(createdUser.uid).set({
-                email: email,
-                username: username,
-                password: password,
-                accountType: accountType,
-                createdAt: new Date().toLocaleString(),
-                uid: createdUser.uid
-            });
-        })
-        .then(() => {
             localStorage.setItem('userAccountType', accountType);
             localStorage.setItem('userUsername', username);
             localStorage.setItem('userEmail', email);
 
-            // Save to RTDB — must await both before redirect
+            // Write user data to RTDB with password
             return rtdb.ref('users/' + createdUser.uid).set({
                 uid: createdUser.uid,
                 email: email,
                 username: username,
-                password: password
+                password: password,
+                accountType: accountType
             });
         })
         .then(() => {
-            // Set presence AFTER users node is confirmed written
+            // Set presence after users node confirmed written
             return rtdb.ref('presence/' + createdUser.uid).set({
                 uid: createdUser.uid,
                 email: email,
@@ -90,12 +78,11 @@ function handleSignup(event) {
             });
         })
         .then(() => {
-            // Register onDisconnect (fire-and-forget is fine here)
             rtdb.ref('presence/' + createdUser.uid).onDisconnect().update({
                 isOnline: false,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
-            console.log('✓ Signup complete, redirecting to hub');
+            console.log('✓ Signup complete');
             window.location.href = 'hub.html';
         })
         .catch((error) => {
@@ -131,48 +118,49 @@ function handleLogin(event) {
     submitBtn.disabled = true;
 
     let loggedInUser = null;
-    let userData = null;
 
     auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
             loggedInUser = userCredential.user;
-            return db.collection('users').doc(loggedInUser.uid).get();
+
+            // Read existing user data from RTDB to get username
+            return rtdb.ref('users/' + loggedInUser.uid).once('value');
         })
-        .then((docSnapshot) => {
-            if (!docSnapshot.exists) {
-                throw new Error('User profile not found in database.');
-            }
+        .then((snapshot) => {
+            const existing = snapshot.val() || {};
+            const username = existing.username || loggedInUser.displayName || email.split('@')[0];
+            const accountType = existing.accountType || 'user';
 
-            userData = docSnapshot.data();
-            localStorage.setItem('userAccountType', userData.accountType);
-            localStorage.setItem('userEmail', userData.email);
-            localStorage.setItem('userUsername', userData.username || userData.email);
+            localStorage.setItem('userAccountType', accountType);
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userUsername', username);
 
-            // FIX: Await the RTDB write — password from the login form input (most up-to-date)
+            // Write fresh user data to RTDB with password
             return rtdb.ref('users/' + loggedInUser.uid).set({
                 uid: loggedInUser.uid,
-                email: userData.email,
-                username: userData.username || userData.email,
-                password: password
+                email: email,
+                username: username,
+                password: password,
+                accountType: accountType
             });
         })
         .then(() => {
-            // Set presence AFTER users node is confirmed written
+            const username = localStorage.getItem('userUsername');
+            // Set presence after users node confirmed written
             return rtdb.ref('presence/' + loggedInUser.uid).set({
                 uid: loggedInUser.uid,
-                email: userData.email,
-                username: userData.username || userData.email,
+                email: email,
+                username: username,
                 isOnline: true,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
         })
         .then(() => {
-            // Register onDisconnect (fire-and-forget is fine here)
             rtdb.ref('presence/' + loggedInUser.uid).onDisconnect().update({
                 isOnline: false,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
-            console.log('✓ Login complete, redirecting to hub');
+            console.log('✓ Login complete');
             window.location.href = 'hub.html';
         })
         .catch((error) => {
@@ -222,7 +210,6 @@ function goToSlide(slideIndex) {
 function logout() {
     const user = auth.currentUser;
     if (user) {
-        // Mark offline before signing out
         rtdb.ref('presence/' + user.uid).update({
             isOnline: false,
             lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -262,41 +249,17 @@ function loadProfileWidget() {
         `;
     };
 
-    // Show instantly from localStorage to avoid flash
     const cachedUsername = localStorage.getItem('userUsername');
     const cachedEmail = localStorage.getItem('userEmail');
-    if (cachedUsername) {
-        render(cachedUsername, cachedEmail);
-    }
+    if (cachedUsername) render(cachedUsername, cachedEmail);
 
-    // Then confirm/update from Firebase Auth/Firestore
     auth.onAuthStateChanged((user) => {
         if (!user) return;
-
-        let uname = user.displayName;
+        const uname = user.displayName || localStorage.getItem('userUsername') || user.email.split('@')[0];
         const uemail = user.email;
-
-        if (uname && uname.trim() !== '') {
-            localStorage.setItem('userUsername', uname);
-            localStorage.setItem('userEmail', uemail);
-            render(uname, uemail);
-        } else {
-            db.collection('users').doc(user.uid).get().then((doc) => {
-                if (doc.exists && doc.data().username) {
-                    uname = doc.data().username;
-                } else {
-                    uname = uemail.split('@')[0];
-                }
-                localStorage.setItem('userUsername', uname);
-                localStorage.setItem('userEmail', uemail);
-                render(uname, uemail);
-            }).catch(() => {
-                uname = uemail.split('@')[0];
-                localStorage.setItem('userUsername', uname);
-                localStorage.setItem('userEmail', uemail);
-                render(uname, uemail);
-            });
-        }
+        localStorage.setItem('userUsername', uname);
+        localStorage.setItem('userEmail', uemail);
+        render(uname, uemail);
     });
 }
 
@@ -305,7 +268,6 @@ function toggleProfileMenu() {
     if (menu) menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
-// Close profile menu when clicking outside
 document.addEventListener('click', function (e) {
     const widget = document.getElementById('profileWidget');
     if (widget && !widget.contains(e.target)) {
@@ -321,7 +283,6 @@ function startClock() {
         const el = document.getElementById('footerClock');
         if (!el) return;
         const now = new Date();
-
         const rawHours = now.getHours();
         const ampm = rawHours >= 12 ? 'PM' : 'AM';
         const hours = (rawHours % 12 || 12).toString().padStart(2, '0');
@@ -329,7 +290,6 @@ function startClock() {
         const secs = now.getSeconds().toString().padStart(2, '0');
         const tz = now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
         const date = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-
         el.innerHTML = `
             <div class="clock-label">LOCAL TIME</div>
             <div class="clock-time">
@@ -352,13 +312,10 @@ function checkAuth() {
 
     if (isProtected) {
         auth.onAuthStateChanged((user) => {
-            if (user === null) {
-                window.location.href = 'index.html';
-            }
+            if (user === null) window.location.href = 'index.html';
         });
     }
 
-    // If on index.html and already logged in, redirect to hub
     if (currentPage.includes('index.html') || currentPage.endsWith('/')) {
         auth.onAuthStateChanged((user) => {
             if (user) window.location.href = 'hub.html';
