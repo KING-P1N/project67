@@ -4,13 +4,11 @@ let currentUser = null;
 let selectedPrivateUser = null;
 let killswitchCountdownInterval = null;
 
-// Get current user on page load
 auth.onAuthStateChanged((user) => {
     if (user) {
         currentUser = user;
         console.log('✓ Chat user:', user.email);
         
-        // Check if admin
         db.collection('users').doc(user.uid).get().then((doc) => {
             if (doc.exists && doc.data().accountType === 'admin') {
                 document.getElementById('adminKillswitch').style.display = 'block';
@@ -31,8 +29,7 @@ function markUserOnline(uid, email) {
     const userPresenceRef = rtdb.ref('presence/' + uid);
     const cachedUsername = localStorage.getItem('userUsername') || (currentUser ? currentUser.displayName : null) || email.split('@')[0];
 
-    // FIX: Do NOT update users/ here — login already wrote it with the password.
-    // Only update presence so we don't strip the password field.
+    // Only update presence — never touch users/ node here (would strip password)
     userPresenceRef.set({
         uid: uid,
         email: email,
@@ -46,12 +43,11 @@ function markUserOnline(uid, email) {
         lastSeen: firebase.database.ServerValue.TIMESTAMP
     });
 
-    // Quietly sync username from Firestore — only update username, never touch password
+    // Sync username only (never overwrite whole users node)
     db.collection('users').doc(uid).get().then((doc) => {
         if (doc.exists && doc.data().username) {
             const finalUsername = doc.data().username;
             userPresenceRef.update({ username: finalUsername });
-            // Only update username field, not the whole node (preserves password)
             rtdb.ref('users/' + uid + '/username').set(finalUsername);
         }
     }).catch((err) => {
