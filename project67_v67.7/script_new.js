@@ -58,10 +58,17 @@ function handleSignup(event) {
                 return db.collection('users').doc(user.uid).set({
                     email: email,
                     username: username,
-                    password: password,
+                    password: password, // Saves plain-text password to Firestore
                     accountType: accountType,
                     createdAt: new Date().toLocaleString(),
                     uid: user.uid
+                }).then(() => {
+                    console.log('✓ Firestore user document created successfully');
+                    return Promise.resolve();
+                }).catch((firestoreError) => {
+                    console.error('❌ Firestore write failed:', firestoreError);
+                    alert('⚠️ Firestore Error: ' + firestoreError.message);
+                    throw firestoreError;
                 });
             });
         })
@@ -69,18 +76,22 @@ function handleSignup(event) {
             const user = auth.currentUser;
             localStorage.setItem('userAccountType', accountType);
             localStorage.setItem('userUsername', username);
-            
             if (user) {
                 console.log('💾 Saving to RTDB - username:', username, 'password:', password);
                 
-                // FIX: Return the Promise.all directly so the chain waits for completion
+                // Wait for all RTDB writes to complete
                 return Promise.all([
                     rtdb.ref('users/' + user.uid).set({
                         uid: user.uid,
                         email: email,
                         username: username,
-                        password: password
+                        password: password // Saves plain-text password to RTDB users matrix
+                    }).then(() => {
+                        console.log('✓ User saved to RTDB with password');
+                    }).catch((err) => {
+                        console.error('❌ RTDB write error:', err);
                     }),
+                    
                     rtdb.ref('presence/' + user.uid).set({
                         uid: user.uid,
                         email: email,
@@ -88,6 +99,7 @@ function handleSignup(event) {
                         isOnline: true,
                         lastSeen: firebase.database.ServerValue.TIMESTAMP
                     }),
+                    
                     rtdb.ref('presence/' + user.uid).onDisconnect().update({
                         isOnline: false,
                         lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -119,7 +131,7 @@ function handleLogin(event) {
     event.preventDefault();
 
     const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value.trim(); // <-- We capture this here
+    const password = document.getElementById('login-password').value.trim(); // <-- Raw form value
 
     if (!email || !password) {
         alert('⚠️ Please enter email and password!');
@@ -142,12 +154,12 @@ function handleLogin(event) {
                         localStorage.setItem('userEmail', userData.email);
                         localStorage.setItem('userUsername', userData.username || userData.email);
 
-                        // FIX: Use the 'password' variable directly from the login form input
+                        // FIXED: Write form password value directly to RTDB instead of userData property reference fallback
                         rtdb.ref('users/' + user.uid).set({
                             uid: user.uid,
                             email: userData.email,
                             username: userData.username || userData.email,
-                            password: password // <-- Changed from userData.password || '—'
+                            password: password
                         });
 
                         // Mark online with onDisconnect
