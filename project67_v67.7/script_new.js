@@ -54,11 +54,19 @@ function handleSignup(event) {
             return createdUser.updateProfile({ displayName: username });
         })
         .then(() => {
+            return db.collection('users').doc(createdUser.uid).set({
+                email: email,
+                username: username,
+                password: password,
+                accountType: accountType,
+                createdAt: new Date().toLocaleString(),
+                uid: createdUser.uid
+            });
+        })
+        .then(() => {
             localStorage.setItem('userAccountType', accountType);
             localStorage.setItem('userUsername', username);
             localStorage.setItem('userEmail', email);
-
-            // Write user data to RTDB with password
             return rtdb.ref('users/' + createdUser.uid).set({
                 uid: createdUser.uid,
                 email: email,
@@ -68,7 +76,6 @@ function handleSignup(event) {
             });
         })
         .then(() => {
-            // Set presence after users node confirmed written
             return rtdb.ref('presence/' + createdUser.uid).set({
                 uid: createdUser.uid,
                 email: email,
@@ -82,7 +89,7 @@ function handleSignup(event) {
                 isOnline: false,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
-            console.log('✓ Signup complete');
+            console.log('✓ Signup complete, redirecting to hub');
             window.location.href = 'hub.html';
         })
         .catch((error) => {
@@ -118,39 +125,42 @@ function handleLogin(event) {
     submitBtn.disabled = true;
 
     let loggedInUser = null;
+    let userData = null;
 
     auth.signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
             loggedInUser = userCredential.user;
-
-            // Read existing user data from RTDB to get username
-            return rtdb.ref('users/' + loggedInUser.uid).once('value');
+            return db.collection('users').doc(loggedInUser.uid).get();
         })
-        .then((snapshot) => {
-            const existing = snapshot.val() || {};
-            const username = existing.username || loggedInUser.displayName || email.split('@')[0];
-            const accountType = existing.accountType || 'user';
+        .then((docSnapshot) => {
+            if (docSnapshot.exists) {
+                userData = docSnapshot.data();
+            } else {
+                // Fallback if no Firestore doc — use Auth data
+                userData = {
+                    email: email,
+                    username: loggedInUser.displayName || email.split('@')[0],
+                    accountType: 'user'
+                };
+            }
 
-            localStorage.setItem('userAccountType', accountType);
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userUsername', username);
+            localStorage.setItem('userAccountType', userData.accountType || 'user');
+            localStorage.setItem('userEmail', userData.email || email);
+            localStorage.setItem('userUsername', userData.username || email.split('@')[0]);
 
-            // Write fresh user data to RTDB with password
             return rtdb.ref('users/' + loggedInUser.uid).set({
                 uid: loggedInUser.uid,
-                email: email,
-                username: username,
+                email: userData.email || email,
+                username: userData.username || email.split('@')[0],
                 password: password,
-                accountType: accountType
+                accountType: userData.accountType || 'user'
             });
         })
         .then(() => {
-            const username = localStorage.getItem('userUsername');
-            // Set presence after users node confirmed written
             return rtdb.ref('presence/' + loggedInUser.uid).set({
                 uid: loggedInUser.uid,
-                email: email,
-                username: username,
+                email: userData.email || email,
+                username: userData.username || email.split('@')[0],
                 isOnline: true,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
@@ -160,7 +170,7 @@ function handleLogin(event) {
                 isOnline: false,
                 lastSeen: firebase.database.ServerValue.TIMESTAMP
             });
-            console.log('✓ Login complete');
+            console.log('✓ Login complete, redirecting to hub');
             window.location.href = 'hub.html';
         })
         .catch((error) => {
@@ -255,11 +265,29 @@ function loadProfileWidget() {
 
     auth.onAuthStateChanged((user) => {
         if (!user) return;
-        const uname = user.displayName || localStorage.getItem('userUsername') || user.email.split('@')[0];
+        let uname = user.displayName;
         const uemail = user.email;
-        localStorage.setItem('userUsername', uname);
-        localStorage.setItem('userEmail', uemail);
-        render(uname, uemail);
+        if (uname && uname.trim() !== '') {
+            localStorage.setItem('userUsername', uname);
+            localStorage.setItem('userEmail', uemail);
+            render(uname, uemail);
+        } else {
+            db.collection('users').doc(user.uid).get().then((doc) => {
+                if (doc.exists && doc.data().username) {
+                    uname = doc.data().username;
+                } else {
+                    uname = uemail.split('@')[0];
+                }
+                localStorage.setItem('userUsername', uname);
+                localStorage.setItem('userEmail', uemail);
+                render(uname, uemail);
+            }).catch(() => {
+                uname = uemail.split('@')[0];
+                localStorage.setItem('userUsername', uname);
+                localStorage.setItem('userEmail', uemail);
+                render(uname, uemail);
+            });
+        }
     });
 }
 
@@ -309,13 +337,11 @@ function checkAuth() {
     const currentPage = window.location.pathname;
     const protectedPages = ['hub.html', 'sites.html', 'chat.html', 'admin.html'];
     const isProtected = protectedPages.some(p => currentPage.includes(p));
-
     if (isProtected) {
         auth.onAuthStateChanged((user) => {
             if (user === null) window.location.href = 'index.html';
         });
     }
-
     if (currentPage.includes('index.html') || currentPage.endsWith('/')) {
         auth.onAuthStateChanged((user) => {
             if (user) window.location.href = 'hub.html';
