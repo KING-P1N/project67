@@ -74,7 +74,6 @@
         let killswitchInterval = null;
         let hackInterval = null;
 
-        // Ensure administration UI logic initializes only upon confirmation hooks
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof auth !== 'undefined') {
                 auth.onAuthStateChanged((user) => {
@@ -97,7 +96,6 @@
 
             presenceRef.on('value', (presenceSnap) => {
                 usersRef.once('value', (usersSnap) => {
-                    // Build a map of all registered users (uid → data with password)
                     const usersMap = {};
                     usersSnap.forEach((child) => {
                         const u = child.val();
@@ -106,15 +104,12 @@
 
                     console.log("[DEBUG] Current Registered User DB Nodes mapped:", usersMap);
 
-                    // Collect only online users, merging with password from usersMap
                     const onlineUsers = [];
                     presenceSnap.forEach((child) => {
                         const p = child.val();
                         if (p && p.isOnline) {
                             const rtdbUid = p.uid || child.key;
                             const registered = usersMap[rtdbUid] || {};
-                            
-                            // Cross-reference data pathways for credentials fallback verification
                             const resolvedPassword = registered.password || p.password || '—';
 
                             onlineUsers.push({
@@ -128,7 +123,6 @@
 
                     console.log("[DEBUG] Active Output Rendering Matrix:", onlineUsers);
 
-                    // Render users table
                     const list = document.getElementById('adminUsersList');
                     if (onlineUsers.length === 0) {
                         list.innerHTML = '<p style="color:#888;">No users online</p>';
@@ -157,7 +151,6 @@
                         `;
                     }
 
-                    // Hack dropdown
                     const select = document.getElementById('hackTargetSelect');
                     const currentVal = select.value;
                     select.innerHTML = '<option value="">-- Select a user --</option>';
@@ -225,17 +218,18 @@
             document.getElementById('hackCountdown').style.display = 'none';
         }
 
+        // FIXED: Checked display style of the text container for reliable single-click toggling
         function togglePwd(uid) {
             const dots = document.getElementById('pwd_' + uid);
             const text = document.getElementById('pwdtxt_' + uid);
             if (!dots || !text) return;
             
-            if (dots.style.display === 'none') {
-                dots.style.display = 'inline';
-                text.style.display = 'none';
-            } else {
-                dots.style.display = 'none';
+            if (text.style.display === 'none') {
                 text.style.display = 'inline';
+                dots.style.display = 'none';
+            } else {
+                text.style.display = 'none';
+                dots.style.display = 'inline';
             }
         }
 
